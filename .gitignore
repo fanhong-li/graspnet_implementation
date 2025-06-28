@@ -14,4 +14,4 @@
 **/*.egg-info/**
 logs
 dataset/tolerance
-**/.idea/
+**/.idea/weights/*.tar
