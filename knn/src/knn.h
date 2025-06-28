@@ -3,8 +3,8 @@
 
 #ifdef WITH_CUDA
 #include "cuda/vision.h"
-#include <THC/THC.h>
-extern THCState *state;
+#include <cuda_runtime.h>
+#include <c10/cuda/CUDAGuard.h>
 #endif
 
 
@@ -27,10 +27,11 @@ int knn(at::Tensor& ref, at::Tensor& query, at::Tensor& idx)
 
 
 
-  if (ref.type().is_cuda()) {
+  if (ref.device().is_cuda()) {
 #ifdef WITH_CUDA
     // TODO raise error if not compiled with CUDA
-    float *dist_dev = (float*)THCudaMalloc(state, ref_nb * query_nb * sizeof(float));
+    float *dist_dev;
+    cudaMalloc(&dist_dev, ref_nb * query_nb * sizeof(float));
 
     for (int b = 0; b < batch; b++)
     {
@@ -39,12 +40,14 @@ int knn(at::Tensor& ref, at::Tensor& query, at::Tensor& idx)
       knn_device(ref_dev + b * dim * ref_nb, ref_nb, query_dev + b * dim * query_nb, query_nb, dim, k,
       dist_dev, idx_dev + b * k * query_nb, c10::cuda::getCurrentCUDAStream());
     }
-    THCudaFree(state, dist_dev);
+    // THCudaFree(state, dist_dev);
+    cudaFree(dist_dev);
     cudaError_t err = cudaGetLastError();
     if (err != cudaSuccess)
     {
         printf("error in knn: %s\n", cudaGetErrorString(err));
-        THError("aborting");
+        // THError("aborting");
+        AT_ERROR("aborting");
     }
     return 1;
 #else
@@ -53,7 +56,9 @@ int knn(at::Tensor& ref, at::Tensor& query, at::Tensor& idx)
   }
 
 
-    float *dist_dev = (float*)malloc(ref_nb * query_nb * sizeof(float));
+    // float *dist_dev = (float*)malloc(ref_nb * query_nb * sizeof(float));
+    float *dist_dev;
+    cudaMalloc(&dist_dev, ref_nb * query_nb * sizeof(float));
     long *ind_buf = (long*)malloc(ref_nb * sizeof(long));
     for (int b = 0; b < batch; b++) {
     knn_cpu(ref_dev + b * dim * ref_nb, ref_nb, query_dev + b * dim * query_nb, query_nb, dim, k,
