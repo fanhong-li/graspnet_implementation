@@ -16,3 +16,4 @@ logs
 dataset/tolerance
 **/.idea/weights/*.tar
 weights/minkuresunet_realsense.tar
+weights/minkuresunet_realsense.tar
